@@ -22,26 +22,40 @@ from packaging.version import Version as version
 
 
 class TCCUtil:
+
+    default_service = "kTCCServiceAccessibility"
+    default_database = "/Library/Application Support/com.apple.TCC/TCC.db"
+
     def __init__(self):
-        self.service = None
-        self.database = None
+        self.database = TCCUtil.default_database
+        # default TCC Service
+        self.service = TCCUtil.default_service
 
         # old globals
         self.conn = None
         self.c = None
+        self.verbose = False
+        # Set "sudo" to True if called with Admin-Privileges.
+        self.sudo = True if os.getuid() == 0 else False
+        # Utility Name
+        self.util_name = os.path.basename(sys.argv[0])
+        # Utility Version
+        self.util_version = "1.2.13"
+        #
+        self.client_type = None
 
     def display_version(self):
         """Print the version of this utility."""
-        print("%s %s" % (util_name, util_version))
+        print("%s %s" % (self.util_name, self.util_version))
         sys.exit(0)
 
     def sudo_required(self):
         """Check if user has root priveleges to access the database."""
-        if not sudo:
+        if not self.sudo:
             print("Error:")
             print(
                 "  When accessing the Accessibility Database, %s needs to be run with admin-privileges.\n"
-                % (util_name)
+                % (self.util_name)
             )
             self.display_help(1)
 
@@ -63,7 +77,6 @@ class TCCUtil:
         # Check if Database is already open, else open it.
         try:
             self.conn.execute("")
-            self.verbose_output("hmmmm")
         except:
             self.verbose_output("Opening Database...")
         try:
@@ -122,7 +135,7 @@ class TCCUtil:
         parser.print_help()
         if error_code is not None:
             sys.exit(error_code)
-        print("%s %s" % (util_name, util_version))
+        print("%s %s" % (self.util_name, self.util_version))
         sys.exit(0)
 
     def close_database(self):
@@ -149,7 +162,7 @@ class TCCUtil:
 
     def verbose_output(self, *args):
         """Show verbose output."""
-        if verbose:
+        if self.verbose:
             try:
                 for a in args:
                     print(a)
@@ -182,17 +195,16 @@ class TCCUtil:
 
     def cli_util_or_bundle_id(self, client):
         """Check if the item is a path or a bundle ID."""
-        global client_type
         # If the app starts with a slash, it is a command line utility.
         # Setting the client_type to 1 will make the item visible in the
         # GUI so you can manually click the checkbox.
         if client[0] == "/":
-            client_type = 1
+            self.client_type = 1
             self.verbose_output('Detected "%s" as Command Line Utility.' % (client))
         # Otherwise, the app will be a bundle ID, which starts
         # with a com., net., or org., etc.
         else:
-            client_type = 0
+            self.client_type = 0
             self.verbose_output('Detected "%s" as Bundle ID.' % (client))
 
     def insert_client(self, client):
@@ -207,7 +219,7 @@ class TCCUtil:
             try:
                 self.c.execute(
                     "INSERT or REPLACE INTO access VALUES('%s','%s',%s,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,0)"
-                    % (self.service, client, client_type)
+                    % (self.service, client, self.client_type)
                 )
             except sqlite3.OperationalError:
                 print(
@@ -217,19 +229,19 @@ class TCCUtil:
         elif osx_version >= version("10.14"):
             self.c.execute(
                 "INSERT or REPLACE INTO access VALUES('%s','%s',%s,1,1,NULL,NULL,NULL,'UNUSED',NULL,0,0)"
-                % (service, client, client_type)
+                % (self.service, client, self.client_type)
             )
         # El Capitan through Mojave
         elif osx_version >= version("10.11"):
             self.c.execute(
                 "INSERT or REPLACE INTO access VALUES('%s','%s',%s,1,1,NULL,NULL)"
-                % (self.service, client, client_type)
+                % (self.service, client, self.client_type)
             )
         # Yosemite or lower
         else:
             self.c.execute(
                 "INSERT or REPLACE INTO access VALUES('%s','%s',%s,1,1,NULL)"
-                % (self.service, client, client_type)
+                % (self.service, client, self.client_type)
             )
         self.commit_changes()
 
@@ -356,28 +368,10 @@ class TCCUtil:
 
 
 if __name__ == "__main__":
-    # Utility Name
-    util_name = os.path.basename(sys.argv[0])
-
-    # Utility Version
-    util_version = "1.2.13"
-
     # Current OS X version
     osx_version = version(
         mac_ver()[0]
     )  # mac_ver() returns 10.16 for Big Sur instead 11.+
-
-    # Database Path
-    tcc_db = "/Library/Application Support/com.apple.TCC/TCC.db"
-
-    # Set "sudo" to True if called with Admin-Privileges.
-    sudo = True if os.getuid() == 0 else False
-
-    # Default Verbosity
-    verbose = False
-
-    # TCC Service
-    service = "kTCCServiceAccessibility"
 
     parser = argparse.ArgumentParser(description="Modify Accesibility Preferences")
     parser.add_argument(
@@ -387,7 +381,12 @@ if __name__ == "__main__":
         nargs="?",
         help="This option is only used to perform a reset.",
     )
-    parser.add_argument("--service", "-s", default=service, help="Set TCC service")
+    parser.add_argument(
+        "--service",
+        "-s",
+        default=TCCUtil.default_service,
+        help="Set TCC service (defaults to %s)" % TCCUtil.default_service,
+    )
     parser.add_argument(
         "--list",
         "-l",
@@ -396,8 +395,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--database",
-        default=tcc_db,
-        help="Database to use (defaults to %s)." % tcc_db,
+        default=TCCUtil.default_database,
+        help="Database to use (defaults to %s)." % TCCUtil.default_database,
     )
     parser.add_argument(
         "--list-all",
