@@ -321,12 +321,7 @@ class TCCUtil:
 
         if args.action:
             if args.action == "reset":
-                exit_status = os.system(
-                    "tccutil \
-    {}".format(
-                        " ".join(sys.argv[1:])
-                    )
-                )
+                exit_status = os.system("tccutil {}".format(" ".join(sys.argv[1:])))
                 sys.exit(exit_status / 256)
             else:
                 print("Error\n  Unrecognized command {}".format(args.action))
@@ -391,6 +386,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--database",
+        "-D",
         default=TCCUtil.default_database,
         help="Database to use (defaults to %s)." % TCCUtil.default_database,
     )
