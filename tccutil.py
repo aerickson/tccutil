@@ -28,10 +28,8 @@ class TCCUtil:
 
     def __init__(self):
         self.database = TCCUtil.default_database
-        # default TCC Service
         self.service = TCCUtil.default_service
 
-        # old globals
         self.conn = None
         self.c = None
         self.verbose = False
@@ -41,7 +39,6 @@ class TCCUtil:
         self.util_name = os.path.basename(sys.argv[0])
         # Utility Version
         self.util_version = "1.2.13"
-        #
         self.client_type = None
 
     def display_version(self):
@@ -55,19 +52,19 @@ class TCCUtil:
             print("Error:")
             print(
                 "  When accessing the Accessibility Database, %s needs to be run with admin-privileges.\n"
-                % (self.util_name)
+                % self.util_name
             )
             self.display_help(1)
 
     def digest_check(self, digest_to_check):
         """Validates that a digest for the table is one that can be used with tccutil."""
         # Do a sanity check that TCC access table has expected structure
-        accessTableDigest = ""
+        access_table_digest = ""
         for row in digest_to_check.fetchall():
-            accessTableDigest = hashlib.sha1(row[0].encode("utf-8")).hexdigest()[0:10]
+            access_table_digest = hashlib.sha1(row[0].encode("utf-8")).hexdigest()[0:10]
             break
 
-        return accessTableDigest
+        return access_table_digest
 
     def open_database(self, digest=False):
         """Open the database for editing values."""
@@ -87,39 +84,39 @@ class TCCUtil:
             self.c = self.conn.cursor()
 
             # Do a sanity check that TCC access table has expected structure
-            accessTableDigest = self.digest_check(
+            access_table_digest = self.digest_check(
                 self.c.execute(
                     "SELECT sql FROM sqlite_master WHERE name='access' and type='table'"
                 )
             )
 
             if digest:
-                print(accessTableDigest)
+                print(access_table_digest)
                 sys.exit(0)
 
             # check if table in DB has expected structure:
             if not (
-                accessTableDigest == "8e93d38f7c"
+                access_table_digest == "8e93d38f7c"
                 or  # prior to El Capitan
                 # El Capitan , Sierra, High Sierra
                 (
                     osx_version >= version("10.11")
-                    and accessTableDigest in ["9b2ea61b30", "1072dc0e4b"]
+                    and access_table_digest in ["9b2ea61b30", "1072dc0e4b"]
                 )
                 or
                 # Mojave and Catalina
                 (
                     osx_version >= version("10.14")
-                    and accessTableDigest in ["ecc443615f", "80a4bb6912"]
+                    and access_table_digest in ["ecc443615f", "80a4bb6912"]
                 )
                 or
                 # Big Sur and later
                 (
                     osx_version >= version("10.16")
-                    and accessTableDigest in ["3d1c2a0e97", "cef70648de"]
+                    and access_table_digest in ["3d1c2a0e97", "cef70648de"]
                 )
             ):
-                print("TCC Database structure is unknown (%s)" % accessTableDigest)
+                print("TCC Database structure is unknown (%s)" % access_table_digest)
                 sys.exit(1)
 
             self.verbose_output("Database opened.\n")
@@ -200,12 +197,12 @@ class TCCUtil:
         # GUI so you can manually click the checkbox.
         if client[0] == "/":
             self.client_type = 1
-            self.verbose_output('Detected "%s" as Command Line Utility.' % (client))
+            self.verbose_output('Detected "%s" as Command Line Utility.' % client)
         # Otherwise, the app will be a bundle ID, which starts
         # with a com., net., or org., etc.
         else:
             self.client_type = 0
-            self.verbose_output('Detected "%s" as Bundle ID.' % (client))
+            self.verbose_output('Detected "%s" as Bundle ID.' % client)
 
     def insert_client(self, client):
         """Insert a client into the database."""
@@ -213,7 +210,7 @@ class TCCUtil:
         # Check if it is a command line utility or a bundle ID
         # as the default value to enable it is different.
         self.cli_util_or_bundle_id(client)
-        self.verbose_output('Inserting "%s" into Database...' % (client))
+        self.verbose_output('Inserting "%s" into Database...' % client)
         # Big Sur and later
         if osx_version >= version("10.16"):
             try:
@@ -248,7 +245,7 @@ class TCCUtil:
     def delete_client(self, client):
         """Remove a client from the database."""
         self.open_database()
-        self.verbose_output('Removing "%s" from Database...' % (client))
+        self.verbose_output('Removing "%s" from Database...' % client)
         try:
             self.c.execute(
                 "DELETE from access where client IS '%s' AND service IS '%s'"
@@ -331,14 +328,11 @@ class TCCUtil:
             else:
                 print("Error\n  Unrecognized command {}".format(args.action))
 
-        # global service
-        # service = args.service
         self.service = args.service
 
         if args.verbose:
             # If verbose option is set, set verbose to True and remove all verbose arguments.
-            global verbose
-            verbose = True
+            self.verbose = True
 
         if args.digest:
             self.open_database(digest=True)
