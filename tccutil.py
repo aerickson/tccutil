@@ -29,17 +29,20 @@ class TCCUtil:
     def __init__(self):
         self.database = TCCUtil.default_database
         self.service = TCCUtil.default_service
-
-        self.conn = None
-        self.c = None
         self.verbose = False
+        self.client_type = None
         # Set "sudo" to True if called with Admin-Privileges.
         self.sudo = True if os.getuid() == 0 else False
+
+        # db connection handle
+        self.conn = None
+        # db cursor
+        self.c = None
+
         # Utility Name
         self.util_name = os.path.basename(sys.argv[0])
         # Utility Version
         self.util_version = "1.2.13"
-        self.client_type = None
 
     def display_version(self):
         """Print the version of this utility."""
@@ -331,7 +334,6 @@ class TCCUtil:
         self.service = args.service
 
         if args.verbose:
-            # If verbose option is set, set verbose to True and remove all verbose arguments.
             self.verbose = True
 
         if args.digest:
