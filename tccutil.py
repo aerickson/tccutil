@@ -311,6 +311,7 @@ class TCCUtil:
             self.display_help(2)
 
         args = parser.parse_args()
+        # print(args)
 
         if args.database:
             self.database = args.database
@@ -353,6 +354,9 @@ class TCCUtil:
 
         for item in args.disable:
             self.disable(item)
+
+        # TODO: detect if no command given? just list?
+        #   - currently doesn't warn and does nothing
 
         self.close_database()
         sys.exit(0)
