@@ -31,8 +31,13 @@ class TCCUtil:
         self.service = TCCUtil.default_service
         self.verbose = False
         self.client_type = None
+
         # Set "sudo" to True if called with Admin-Privileges.
         self.sudo = True if os.getuid() == 0 else False
+        # Current OS X version
+        self.osx_version = version(
+            mac_ver()[0]
+        )  # mac_ver() returns 10.16 for Big Sur instead 11.+
 
         # db connection handle
         self.conn = None
@@ -103,19 +108,19 @@ class TCCUtil:
                 or  # prior to El Capitan
                 # El Capitan , Sierra, High Sierra
                 (
-                    osx_version >= version("10.11")
+                    self.osx_version >= version("10.11")
                     and access_table_digest in ["9b2ea61b30", "1072dc0e4b"]
                 )
                 or
                 # Mojave and Catalina
                 (
-                    osx_version >= version("10.14")
+                    self.osx_version >= version("10.14")
                     and access_table_digest in ["ecc443615f", "80a4bb6912"]
                 )
                 or
                 # Big Sur and later
                 (
-                    osx_version >= version("10.16")
+                    self.osx_version >= version("10.16")
                     and access_table_digest in ["3d1c2a0e97", "cef70648de"]
                 )
             ):
@@ -215,7 +220,7 @@ class TCCUtil:
         self.cli_util_or_bundle_id(client)
         self.verbose_output('Inserting "%s" into Database...' % client)
         # Big Sur and later
-        if osx_version >= version("10.16"):
+        if self.osx_version >= version("10.16"):
             try:
                 self.c.execute(
                     "INSERT or REPLACE INTO access VALUES('%s','%s',%s,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,0)"
@@ -226,13 +231,13 @@ class TCCUtil:
                     "Attempting to write a readonly database.  You probably need to disable SIP."
                 )
         # Mojave through Big Sur
-        elif osx_version >= version("10.14"):
+        elif self.osx_version >= version("10.14"):
             self.c.execute(
                 "INSERT or REPLACE INTO access VALUES('%s','%s',%s,1,1,NULL,NULL,NULL,'UNUSED',NULL,0,0)"
                 % (self.service, client, self.client_type)
             )
         # El Capitan through Mojave
-        elif osx_version >= version("10.11"):
+        elif self.osx_version >= version("10.11"):
             self.c.execute(
                 "INSERT or REPLACE INTO access VALUES('%s','%s',%s,1,1,NULL,NULL)"
                 % (self.service, client, self.client_type)
@@ -268,7 +273,7 @@ class TCCUtil:
         # right away (without closing the window).
         # Set to 1 to enable the client.
         enable_mode_name = (
-            "auth_value" if osx_version >= version("10.16") else "allowed"
+            "auth_value" if self.osx_version >= version("10.16") else "allowed"
         )
         try:
             self.c.execute(
@@ -289,7 +294,7 @@ class TCCUtil:
         # right away (without closing the window).
         # Set to 0 to disable the client.
         enable_mode_name = (
-            "auth_value" if osx_version >= version("10.16") else "allowed"
+            "auth_value" if self.osx_version >= version("10.16") else "allowed"
         )
         try:
             self.c.execute(
@@ -363,11 +368,6 @@ class TCCUtil:
 
 
 if __name__ == "__main__":
-    # Current OS X version
-    osx_version = version(
-        mac_ver()[0]
-    )  # mac_ver() returns 10.16 for Big Sur instead 11.+
-
     parser = argparse.ArgumentParser(description="Modify Accesibility Preferences")
     parser.add_argument(
         "action",
